@@ -36,6 +36,9 @@
     <string name="reminder_test_off_text">测试通知：提醒已关闭</string>
     <string name="notification_channel_name">上课提醒</string>
     <string name="notification_channel_description">每节课开始前提醒上课</string>
+    <string name="reminder_service_channel">后台提醒服务</string>
+    <string name="reminder_service_title">上课提醒已开启</string>
+    <string name="reminder_service_text">正在后台等待上课提醒，无需打开 App</string>
     <string name="notification_title">上课提醒</string>
     <string name="notification_text">%1$s %2$s 即将开始 · %3$s</string>
     <string name="notification_text_no_location">%1$s %2$s 即将开始</string>

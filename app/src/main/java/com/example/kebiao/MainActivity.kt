@@ -1,6 +1,7 @@
 package com.example.kebiao
 
 import android.Manifest
+import android.content.Intent
 import android.net.Uri
 import android.os.Bundle
 import android.os.Build
@@ -24,6 +25,7 @@ import com.example.kebiao.model.Course
 import com.example.kebiao.model.DEFAULT_PERIOD_TIMES
 import com.example.kebiao.ocr.ScheduleImportProcessor
 import com.example.kebiao.reminder.ClassReminderScheduler
+import com.example.kebiao.reminder.ReminderService
 import com.example.kebiao.storage.ScheduleStore
 import com.example.kebiao.ui.TimetableView
 import kotlinx.coroutines.launch
@@ -111,6 +113,7 @@ class MainActivity : AppCompatActivity() {
             )
             requestNotificationPermissionIfNeeded()
         }
+        updateReminderService()
     }
 
     private fun launchDocumentPicker() {
@@ -286,6 +289,7 @@ class MainActivity : AppCompatActivity() {
         store.clearSchedule()
         ClassReminderScheduler.cancelAll(this)
         renderSchedule()
+        updateReminderService()
     }
 
     private fun persistSchedule() {
@@ -296,6 +300,7 @@ class MainActivity : AppCompatActivity() {
             currentPeriodTimes,
             reminderMinutes
         )
+        updateReminderService()
     }
 
     private fun showReminderDialog() {
@@ -340,6 +345,7 @@ class MainActivity : AppCompatActivity() {
                 } else {
                     Toast.makeText(this, R.string.reminder_off, Toast.LENGTH_SHORT).show()
                 }
+                updateReminderService()
                 dialog.dismiss()
             }
             dialog.getButton(AlertDialog.BUTTON_NEUTRAL).setOnClickListener {
@@ -372,6 +378,19 @@ class MainActivity : AppCompatActivity() {
             ) != PackageManager.PERMISSION_GRANTED
         ) {
             notificationPermissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
+        }
+    }
+
+    private fun updateReminderService() {
+        val intent = Intent(this, ReminderService::class.java)
+        if (reminderMinutes > 0 && currentCourses.isNotEmpty()) {
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                startForegroundService(intent)
+            } else {
+                startService(intent)
+            }
+        } else {
+            stopService(intent)
         }
     }
 
