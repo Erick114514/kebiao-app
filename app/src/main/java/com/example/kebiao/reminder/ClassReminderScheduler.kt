@@ -94,9 +94,14 @@ object ClassReminderScheduler {
                     pendingIntent
                 )
             } else {
-                alarmManager.setAndAllowWhileIdle(
-                    AlarmManager.RTC_WAKEUP,
-                    triggerAt,
+                val showIntent = PendingIntent.getActivity(
+                    context,
+                    requestCode,
+                    Intent(context, MainActivity::class.java),
+                    PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+                )
+                alarmManager.setAlarmClock(
+                    AlarmManager.AlarmClockInfo(triggerAt, showIntent),
                     pendingIntent
                 )
             }
