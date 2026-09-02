@@ -19,6 +19,7 @@ class PdfCourseParserTest {
         )
         assertTrue(result.periodTimes.size >= 13)
         assertEquals("第1节\n08:00-08:45", result.periodTimes[0])
+        assertEquals("第10节\n17:30-18:15", result.periodTimes[9])
 
         assertHas(result, "数字电路与逻辑设计", 0, 3, 5, "蒋惠萍")
         assertHas(result, "JAVA语言程序设计", 0, 6, 7, "闫晓东")
@@ -33,6 +34,11 @@ class PdfCourseParserTest {
         assertHas(result, "数字电路与逻辑设计实验", 3, 8, 10, "苏骄阳")
         assertHas(result, "模拟电子线路", 4, 3, 5, "胡丙萌")
         assertHas(result, "意大利文化", 6, 1, 2, "网络教师")
+
+        val javaCourse = result.courses.first { it.name.contains("JAVA语言程序设计") }
+        assertTrue("java name should be normalized", javaCourse.name.contains("（一）01"))
+        val circuitCourse = result.courses.first { it.name.contains("数字电路与逻辑设计") && it.dayIndex == 0 }
+        assertTrue("circuit name should be normalized", circuitCourse.name.contains("（一）01"))
 
         val physicsLab = result.courses.filter { it.name.contains("大学物理实验") }
         assertEquals("physics lab should split into two week entries", 2, physicsLab.size)

@@ -6,12 +6,15 @@ import android.graphics.Color
 import android.graphics.Paint
 import android.graphics.RectF
 import android.graphics.Typeface
+import android.text.Layout
 import android.text.TextPaint
-import android.text.TextUtils
+import android.text.StaticLayout
 import android.util.AttributeSet
+import android.view.MotionEvent
 import android.view.View
 import com.example.kebiao.model.Course
 import kotlin.math.max
+import kotlin.math.min
 
 class TimetableView @JvmOverloads constructor(
     context: Context,
@@ -19,16 +22,17 @@ class TimetableView @JvmOverloads constructor(
     defStyleAttr: Int = 0
 ) : View(context, attrs, defStyleAttr) {
 
-    private val labelWidth = dp(78f)
-    private val dayWidth = dp(150f)
-    private val headerHeight = dp(46f)
-    private val rowHeight = dp(78f)
+    private val labelWidth = dp(84f)
+    private val dayWidth = dp(180f)
+    private val headerHeight = dp(48f)
+    private val rowHeight = dp(104f)
     private val pad = dp(7f)
     private val gap = dp(2f)
 
     private var courses: List<Course> = emptyList()
     private var periodTimes: List<String> = emptyList()
     private var placed: List<PlacedCourse> = emptyList()
+    var onCourseClick: ((Course) -> Unit)? = null
 
     private val gridPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
         style = Paint.Style.STROKE
@@ -76,6 +80,25 @@ class TimetableView @JvmOverloads constructor(
         placed = layoutCourses()
         requestLayout()
         invalidate()
+    }
+
+    override fun onTouchEvent(event: MotionEvent): Boolean {
+        if (event.action == MotionEvent.ACTION_UP) {
+            val course = placed.firstOrNull {
+                event.x >= it.left && event.x <= it.right && event.y >= it.top && event.y <= it.bottom
+            }?.course
+            if (course != null) {
+                onCourseClick?.invoke(course)
+                performClick()
+                return true
+            }
+        }
+        return super.onTouchEvent(event)
+    }
+
+    override fun performClick(): Boolean {
+        super.performClick()
+        return true
     }
 
     private val periodCount: Int
@@ -177,49 +200,88 @@ class TimetableView @JvmOverloads constructor(
         cardStrokePaint.color = withAlpha(color, 0xFF)
         canvas.drawRoundRect(cardRect, radius, radius, cardStrokePaint)
 
-        val contentLeft = item.left + dp(8f)
-        val maxWidth = item.right - item.left - dp(16f)
-        var y = item.top + dp(12f)
-        val lineHeight = infoPaint.textSize * 1.16f
+        val contentLeft = item.left + dp(9f)
+        val maxWidth = item.right - item.left - dp(18f)
+        var y = item.top + dp(10f)
+        val availableHeight = item.bottom - item.top - dp(18f)
+        val lineHeight = infoPaint.textSize * 1.18f
+        var remainingLines = max(1, (availableHeight / lineHeight).toInt())
 
-        val name = TextUtils.ellipsize(
+        val name = drawWrapped(
+            canvas,
             item.course.displayName,
             namePaint,
+            contentLeft,
+            y,
             maxWidth,
-            TextUtils.TruncateAt.END
+            min(2, remainingLines)
         )
-        canvas.drawText(name.toString(), contentLeft, y, namePaint)
-        y += namePaint.textSize * 1.35f
+        y += name.height + dp(2f)
+        remainingLines -= name.lineCount
 
-        if (item.course.teacher.isNotBlank()) {
-            val teacher = TextUtils.ellipsize(
-                item.course.teacher,
+        if (item.course.teacher.isNotBlank() && remainingLines > 0) {
+            val teacher = drawWrapped(
+                canvas,
+                "老师：${item.course.teacher}",
                 infoPaint,
+                contentLeft,
+                y,
                 maxWidth,
-                TextUtils.TruncateAt.END
+                min(2, remainingLines)
             )
-            canvas.drawText(teacher.toString(), contentLeft, y, infoPaint)
-            y += lineHeight
+            y += teacher.height + dp(1f)
+            remainingLines -= teacher.lineCount
         }
-        if (item.course.location.isNotBlank()) {
-            val location = TextUtils.ellipsize(
-                item.course.location,
+
+        if (item.course.location.isNotBlank() && remainingLines > 0) {
+            val location = drawWrapped(
+                canvas,
+                "教室：${item.course.location}",
                 infoPaint,
+                contentLeft,
+                y,
                 maxWidth,
-                TextUtils.TruncateAt.END
+                min(2, remainingLines)
             )
-            canvas.drawText(location.toString(), contentLeft, y, infoPaint)
-            y += lineHeight
+            y += location.height + dp(1f)
+            remainingLines -= location.lineCount
         }
-        if (item.course.weeks.isNotBlank()) {
-            val weeks = TextUtils.ellipsize(
-                item.course.weeks,
+
+        if (item.course.weeks.isNotBlank() && remainingLines > 0) {
+            drawWrapped(
+                canvas,
+                "周次：${item.course.weeks}",
                 infoPaint,
+                contentLeft,
+                y,
                 maxWidth,
-                TextUtils.TruncateAt.END
+                remainingLines
             )
-            canvas.drawText(weeks.toString(), contentLeft, y, infoPaint)
         }
+    }
+
+    private fun drawWrapped(
+        canvas: Canvas,
+        text: String,
+        paint: TextPaint,
+        left: Float,
+        top: Float,
+        maxWidth: Float,
+        maxLines: Int
+    ): WrappedResult {
+        if (text.isBlank() || maxLines <= 0) return WrappedResult(0f, 0)
+        val layout = StaticLayout.Builder
+            .obtain(text, 0, text.length, paint, maxWidth.toInt())
+            .setAlignment(Layout.Alignment.ALIGN_NORMAL)
+            .setLineSpacing(0f, 1.08f)
+            .setIncludePad(false)
+            .setMaxLines(maxLines)
+            .build()
+        canvas.save()
+        canvas.translate(left, top)
+        layout.draw(canvas)
+        canvas.restore()
+        return WrappedResult(layout.height.toFloat(), layout.lineCount)
     }
 
     private fun withAlpha(color: Int, alpha: Int): Int {
@@ -236,6 +298,8 @@ class TimetableView @JvmOverloads constructor(
         val right: Float,
         val bottom: Float
     )
+
+    private data class WrappedResult(val height: Float, val lineCount: Int)
 
     companion object {
         private val dayNames = arrayOf("周一", "周二", "周三", "周四", "周五", "周六", "周日")

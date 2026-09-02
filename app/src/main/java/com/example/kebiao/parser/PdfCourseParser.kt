@@ -167,12 +167,16 @@ class PdfCourseParser {
             if (match != null) {
                 val index = match.groupValues[1].toIntOrNull() ?: continue
                 val timeMatch = Regex("[（(](.+?)[）)]").find(line.text)
-                val time = timeMatch?.groupValues?.get(1)
+                val rawTime = timeMatch?.groupValues?.get(1)
                     ?.replace("：", ":")
                     ?.replace("·", "-")
                     ?.trim()
                     ?: ""
-                times[index] = time
+                times[index] = if (rawTime.matches(TIME_PATTERN)) {
+                    rawTime
+                } else {
+                    DEFAULT_PERIOD_TIMES.getOrNull(index - 1) ?: rawTime
+                }
             }
         }
         for ((index, time) in times) {
@@ -260,7 +264,7 @@ class PdfCourseParser {
         if (courseBuilders.isEmpty()) return emptyList()
 
         return courseBuilders.mapNotNull { builder ->
-            val name = builder.nameParts.joinToString("")
+            val name = normalizeCourseName(builder.nameParts.joinToString(""))
             if (name.isBlank()) return@mapNotNull null
             val (start, end) = resolvePeriods(builder, periodRows)
             Course(
@@ -398,6 +402,17 @@ class PdfCourseParser {
         return normalize(text)
     }
 
+    private fun normalizeCourseName(name: String): String {
+        val trimmed = name.trim()
+        if (trimmed.contains("（一）")) return trimmed
+        val match = COURSE_SECTION_REGEX.find(trimmed)
+        return if (match != null) {
+            "${match.groupValues[1]}（一）${match.groupValues[3]}"
+        } else {
+            trimmed
+        }
+    }
+
     companion object {
         private val DAY_HEADER_REGEX = Regex("^(?:星期|周)\\s*([一二三四五六日])\\s*$")
         private val PERIOD_LABEL_REGEX = Regex("第\\s*(\\d{1,2})\\s*节")
@@ -408,5 +423,22 @@ class PdfCourseParser {
             "^\\s*(?:(?:第\\s*)?\\d{1,2}\\s*[-—－–~一]\\s*\\d{1,2}\\s*周|第\\s*\\d{1,2}\\s*周|单周|双周)\\s*$"
         )
         private val LOCATION_KEYWORDS = listOf("校区", "楼", "教室", "实验室", "中心", "场", "室")
+        private val COURSE_SECTION_REGEX = Regex("^(.+?)(一)(\\d{2})$")
+        private val TIME_PATTERN = Regex("^\\d{1,2}:\\d{2}-\\d{1,2}:\\d{2}$")
+        private val DEFAULT_PERIOD_TIMES = listOf(
+            "08:00-08:45",
+            "08:50-09:35",
+            "09:50-10:35",
+            "10:40-11:25",
+            "11:30-12:15",
+            "14:00-14:45",
+            "14:50-15:35",
+            "15:50-16:35",
+            "16:40-17:25",
+            "17:30-18:15",
+            "19:00-19:45",
+            "19:50-20:35",
+            "20:45-21:30"
+        )
     }
 }

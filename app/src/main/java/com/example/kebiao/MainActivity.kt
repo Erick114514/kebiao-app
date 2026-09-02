@@ -8,9 +8,11 @@ import android.widget.ProgressBar
 import android.widget.TextView
 import android.widget.Toast
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.view.isVisible
 import androidx.lifecycle.lifecycleScope
+import com.example.kebiao.model.Course
 import com.example.kebiao.model.ScheduleParseResult
 import com.example.kebiao.ocr.PdfImportProcessor
 import com.example.kebiao.ui.TimetableView
@@ -43,6 +45,7 @@ class MainActivity : AppCompatActivity() {
         gridScroll = findViewById(R.id.gridScroll)
         timetable = findViewById(R.id.timetable)
         summaryText = findViewById(R.id.summaryText)
+        timetable.onCourseClick = ::showCourseDetail
 
         findViewById<Button>(R.id.btnImport).setOnClickListener {
             openPdf.launch(arrayOf("application/pdf", "application/octet-stream", "*/*"))
@@ -94,6 +97,24 @@ class MainActivity : AppCompatActivity() {
             "\n" + result.warnings.joinToString("\n")
         }
         summaryText.text = "识别到 ${result.courses.size} 门课程，点击右上角可重新导入。$warningText"
+    }
+
+    private fun showCourseDetail(course: Course) {
+        val period = if (course.startPeriod == course.endPeriod) {
+            "第${course.startPeriod}节"
+        } else {
+            "第${course.startPeriod}-${course.endPeriod}节"
+        }
+        AlertDialog.Builder(this)
+            .setTitle(course.displayName)
+            .setMessage(
+                "老师：${course.teacher.ifBlank { "未识别" }}\n" +
+                    "教室：${course.location.ifBlank { "未识别" }}\n" +
+                    "周次：${course.weeks.ifBlank { "未识别" }}\n" +
+                    "节次：$period"
+            )
+            .setPositiveButton("知道了", null)
+            .show()
     }
 
     private fun setBusy(busy: Boolean, message: String) {
