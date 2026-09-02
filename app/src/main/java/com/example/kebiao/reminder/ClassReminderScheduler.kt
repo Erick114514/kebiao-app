@@ -48,63 +48,66 @@ object ClassReminderScheduler {
         periodTimes: List<String>,
         leadMinutes: Int
     ) {
-        val alarmManager = context.getSystemService(AlarmManager::class.java)
-        cancelAll(context)
-        createChannel(context)
-        if (leadMinutes <= 0 || courses.isEmpty()) return
+        try {
+            val alarmManager = context.getSystemService(AlarmManager::class.java)
+            cancelAll(context)
+            createChannel(context)
+            if (leadMinutes <= 0 || courses.isEmpty()) return
 
-        val now = System.currentTimeMillis()
-        val slots = courses.groupBy { it.dayIndex to it.startPeriod }
-        for ((slot, slotCourses) in slots) {
-            val dayIndex = slot.first
-            val period = slot.second
-            val (hour, minute) = parseStartTime(periodTimes, period)
-            val calendar = Calendar.getInstance().apply {
-                set(Calendar.DAY_OF_WEEK, DAY_OF_WEEK_BY_INDEX[dayIndex])
-                set(Calendar.HOUR_OF_DAY, hour)
-                set(Calendar.MINUTE, minute)
-                set(Calendar.SECOND, 0)
-                set(Calendar.MILLISECOND, 0)
-            }
-            var triggerAt = calendar.timeInMillis - leadMinutes * 60_000L
-            if (triggerAt < now) {
-                calendar.add(Calendar.DAY_OF_YEAR, 7)
-                triggerAt = calendar.timeInMillis - leadMinutes * 60_000L
-            }
-            val requestCode = dayIndex * 100 + period
-            val title = context.getString(R.string.notification_title)
-            val text = buildText(context, slotCourses, period)
-            val intent = Intent(context, ClassReminderReceiver::class.java)
-                .setAction(ACTION_REMIND)
-                .putExtra(EXTRA_TITLE, title)
-                .putExtra(EXTRA_TEXT, text)
-                .putExtra(EXTRA_REQUEST_CODE, requestCode)
-            val pendingIntent = PendingIntent.getBroadcast(
-                context,
-                requestCode,
-                intent,
-                PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
-            )
-            val canScheduleExact = Build.VERSION.SDK_INT < Build.VERSION_CODES.S ||
-                alarmManager.canScheduleExactAlarms()
-            if (canScheduleExact) {
-                alarmManager.setExactAndAllowWhileIdle(
-                    AlarmManager.RTC_WAKEUP,
-                    triggerAt,
-                    pendingIntent
-                )
-            } else {
-                val showIntent = PendingIntent.getActivity(
+            val now = System.currentTimeMillis()
+            val slots = courses.groupBy { it.dayIndex to it.startPeriod }
+            for ((slot, slotCourses) in slots) {
+                val dayIndex = slot.first
+                val period = slot.second
+                val (hour, minute) = parseStartTime(periodTimes, period)
+                val calendar = Calendar.getInstance().apply {
+                    set(Calendar.DAY_OF_WEEK, DAY_OF_WEEK_BY_INDEX[dayIndex])
+                    set(Calendar.HOUR_OF_DAY, hour)
+                    set(Calendar.MINUTE, minute)
+                    set(Calendar.SECOND, 0)
+                    set(Calendar.MILLISECOND, 0)
+                }
+                var triggerAt = calendar.timeInMillis - leadMinutes * 60_000L
+                if (triggerAt < now) {
+                    calendar.add(Calendar.DAY_OF_YEAR, 7)
+                    triggerAt = calendar.timeInMillis - leadMinutes * 60_000L
+                }
+                val requestCode = dayIndex * 100 + period
+                val title = context.getString(R.string.notification_title)
+                val text = buildText(context, slotCourses, period)
+                val intent = Intent(context, ClassReminderReceiver::class.java)
+                    .setAction(ACTION_REMIND)
+                    .putExtra(EXTRA_TITLE, title)
+                    .putExtra(EXTRA_TEXT, text)
+                    .putExtra(EXTRA_REQUEST_CODE, requestCode)
+                val pendingIntent = PendingIntent.getBroadcast(
                     context,
                     requestCode,
-                    Intent(context, MainActivity::class.java),
+                    intent,
                     PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
                 )
-                alarmManager.setAlarmClock(
-                    AlarmManager.AlarmClockInfo(triggerAt, showIntent),
-                    pendingIntent
-                )
+                val canScheduleExact = Build.VERSION.SDK_INT < Build.VERSION_CODES.S ||
+                    alarmManager.canScheduleExactAlarms()
+                if (canScheduleExact) {
+                    alarmManager.setExactAndAllowWhileIdle(
+                        AlarmManager.RTC_WAKEUP,
+                        triggerAt,
+                        pendingIntent
+                    )
+                } else {
+                    val showIntent = PendingIntent.getActivity(
+                        context,
+                        requestCode,
+                        Intent(context, MainActivity::class.java),
+                        PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+                    )
+                    alarmManager.setAlarmClock(
+                        AlarmManager.AlarmClockInfo(triggerAt, showIntent),
+                        pendingIntent
+                    )
+                }
             }
+        } catch (_: Exception) {
         }
     }
 
