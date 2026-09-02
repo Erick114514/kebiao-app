@@ -19,21 +19,25 @@ class ReminderService : Service() {
     }
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
-        ClassReminderScheduler.rescheduleFromStorage(this)
-        val contentIntent = PendingIntent.getActivity(
-            this,
-            0,
-            Intent(this, MainActivity::class.java),
-            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
-        )
-        val notification = NotificationCompat.Builder(this, CHANNEL_ID)
-            .setSmallIcon(R.drawable.ic_bell)
-            .setContentTitle(getString(R.string.reminder_service_title))
-            .setContentText(getString(R.string.reminder_service_text))
-            .setOngoing(true)
-            .setContentIntent(contentIntent)
-            .build()
-        startForeground(NOTIFICATION_ID, notification)
+        try {
+            ClassReminderScheduler.rescheduleFromStorage(this)
+            val contentIntent = PendingIntent.getActivity(
+                this,
+                0,
+                Intent(this, MainActivity::class.java),
+                PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+            )
+            val notification = NotificationCompat.Builder(this, CHANNEL_ID)
+                .setSmallIcon(R.drawable.ic_bell)
+                .setContentTitle(getString(R.string.reminder_service_title))
+                .setContentText(getString(R.string.reminder_service_text))
+                .setOngoing(true)
+                .setContentIntent(contentIntent)
+                .build()
+            startForeground(NOTIFICATION_ID, notification)
+        } catch (_: Exception) {
+            stopSelf()
+        }
         return START_STICKY
     }
 

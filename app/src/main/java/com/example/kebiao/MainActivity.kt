@@ -382,15 +382,19 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun updateReminderService() {
-        val intent = Intent(this, ReminderService::class.java)
-        if (reminderMinutes > 0 && currentCourses.isNotEmpty()) {
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-                startForegroundService(intent)
+        try {
+            val intent = Intent(this, ReminderService::class.java)
+            if (reminderMinutes > 0 && currentCourses.isNotEmpty()) {
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                    startForegroundService(intent)
+                } else {
+                    startService(intent)
+                }
             } else {
-                startService(intent)
+                stopService(intent)
             }
-        } else {
-            stopService(intent)
+        } catch (_: Exception) {
+            // AlarmManager reminders remain active even if the foreground service cannot start.
         }
     }
 
