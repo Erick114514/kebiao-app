@@ -33,7 +33,7 @@
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:minWidth="0dp"
-            android:text="@string/manual_input"
+            android:text="@string/manual_short"
             app:icon="@drawable/ic_manual"
             app:iconGravity="textStart"
             app:iconPadding="6dp"
@@ -46,10 +46,23 @@
             android:layout_height="wrap_content"
             android:layout_marginStart="8dp"
             android:minWidth="0dp"
-            android:text="@string/import_file"
+            android:text="@string/import_short"
             app:icon="@drawable/ic_import"
             app:iconGravity="textStart"
             app:iconPadding="6dp" />
+
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/btnRemind"
+            style="@style/Widget.Material3.Button.OutlinedButton"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="8dp"
+            android:minWidth="0dp"
+            android:text="@string/reminder"
+            app:icon="@drawable/ic_bell"
+            app:iconGravity="textStart"
+            app:iconPadding="6dp"
+            app:iconTint="@color/topBarText" />
 
     </LinearLayout>
 

@@ -2,8 +2,11 @@
 <resources>
     <string name="app_name">课表</string>
     <string name="import_file">导入文件</string>
+    <string name="import_short">导入</string>
     <string name="manual_input">手动输入</string>
+    <string name="manual_short">手动</string>
     <string name="clear">清空</string>
+    <string name="reminder">提醒</string>
     <string name="empty_title">导入课表文件</string>
     <string name="empty_subtitle">支持 PDF、DOC、DOCX，也可手动输入课程生成周一至周日的周课表。</string>
     <string name="manual_name">课程名称 *</string>
@@ -21,4 +24,17 @@
     <string name="ok">知道了</string>
     <string name="name_required">请输入课程名称</string>
     <string name="schedule_summary">当前共 %1$d 门课程。</string>
+    <string name="reminder_dialog_title">上课提醒</string>
+    <string name="reminder_dialog_message">提前多少分钟发送通知？填写 0 可关闭提醒。</string>
+    <string name="reminder_input_hint">例如 15</string>
+    <string name="reminder_invalid">请输入不小于 0 的分钟数</string>
+    <string name="reminder_saved">已设置提前 %1$d 分钟提醒</string>
+    <string name="reminder_off">已关闭上课提醒</string>
+    <string name="notification_permission_denied">需要通知权限才能发送上课提醒</string>
+    <string name="notification_channel_name">上课提醒</string>
+    <string name="notification_channel_description">每节课开始前提醒上课</string>
+    <string name="notification_title">上课提醒</string>
+    <string name="notification_text">%1$s %2$s 即将开始 · %3$s</string>
+    <string name="notification_text_no_location">%1$s %2$s 即将开始</string>
+    <string name="notification_period">第%1$d节</string>
 </resources>

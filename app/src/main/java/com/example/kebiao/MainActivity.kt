@@ -1,7 +1,11 @@
 package com.example.kebiao
 
+import android.Manifest
 import android.net.Uri
 import android.os.Bundle
+import android.os.Build
+import android.content.pm.PackageManager
+import android.text.InputType
 import android.view.View
 import android.widget.ArrayAdapter
 import android.widget.Button
@@ -13,11 +17,14 @@ import android.widget.Toast
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
+import androidx.core.content.ContextCompat
 import androidx.core.view.isVisible
 import androidx.lifecycle.lifecycleScope
 import com.example.kebiao.model.Course
 import com.example.kebiao.model.DEFAULT_PERIOD_TIMES
 import com.example.kebiao.ocr.ScheduleImportProcessor
+import com.example.kebiao.reminder.ClassReminderScheduler
+import com.example.kebiao.storage.ScheduleStore
 import com.example.kebiao.ui.TimetableView
 import kotlinx.coroutines.launch
 
@@ -32,9 +39,23 @@ class MainActivity : AppCompatActivity() {
     private lateinit var summaryText: TextView
     private lateinit var clearButton: Button
     private lateinit var timetable: TimetableView
+    private lateinit var store: ScheduleStore
 
     private val currentCourses = mutableListOf<Course>()
     private var currentPeriodTimes = DEFAULT_PERIOD_TIMES
+    private var reminderMinutes = ScheduleStore.DEFAULT_REMINDER_MINUTES
+
+    private val notificationPermissionLauncher = registerForActivityResult(
+        ActivityResultContracts.RequestPermission()
+    ) { granted ->
+        if (!granted && reminderMinutes > 0) {
+            Toast.makeText(
+                this,
+                R.string.notification_permission_denied,
+                Toast.LENGTH_LONG
+            ).show()
+        }
+    }
 
     private val openDocument = registerForActivityResult(
         ActivityResultContracts.OpenDocument()
@@ -46,6 +67,9 @@ class MainActivity : AppCompatActivity() {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
         processor = ScheduleImportProcessor(this)
+        store = ScheduleStore(this)
+        reminderMinutes = store.loadReminderMinutes()
+        ClassReminderScheduler.createChannel(this)
 
         progressLayout = findViewById(R.id.progressLayout)
         progressText = findViewById(R.id.progressText)
@@ -61,7 +85,26 @@ class MainActivity : AppCompatActivity() {
         findViewById<Button>(R.id.btnImport).setOnClickListener { launchDocumentPicker() }
         findViewById<Button>(R.id.btnEmptyManual).setOnClickListener { showManualInputDialog() }
         findViewById<Button>(R.id.btnEmptyImport).setOnClickListener { launchDocumentPicker() }
+        findViewById<Button>(R.id.btnRemind).setOnClickListener { showReminderDialog() }
         clearButton.setOnClickListener { clearSchedule() }
+
+        val saved = store.loadSchedule()
+        if (saved != null && saved.first.isNotEmpty()) {
+            currentCourses.addAll(saved.first)
+            if (saved.second.isNotEmpty()) {
+                currentPeriodTimes = saved.second
+            }
+            renderSchedule()
+        }
+        if (reminderMinutes > 0 && currentCourses.isNotEmpty()) {
+            ClassReminderScheduler.schedule(
+                this,
+                currentCourses,
+                currentPeriodTimes,
+                reminderMinutes
+            )
+            requestNotificationPermissionIfNeeded()
+        }
     }
 
     private fun launchDocumentPicker() {
@@ -87,6 +130,7 @@ class MainActivity : AppCompatActivity() {
                     currentPeriodTimes = it.periodTimes
                 }
                 renderSchedule(it.warnings)
+                persistSchedule()
             }
             result.onFailure {
                 setBusy(false, "")
@@ -134,6 +178,7 @@ class MainActivity : AppCompatActivity() {
                     endPeriod = end
                 )
                 renderSchedule()
+                persistSchedule()
                 dialog.dismiss()
             }
         }
@@ -185,6 +230,7 @@ class MainActivity : AppCompatActivity() {
                     endPeriod = end
                 )
                 renderSchedule()
+                persistSchedule()
                 dialog.dismiss()
             }
         }
@@ -228,7 +274,77 @@ class MainActivity : AppCompatActivity() {
     private fun clearSchedule() {
         currentCourses.clear()
         currentPeriodTimes = DEFAULT_PERIOD_TIMES
+        store.clearSchedule()
+        ClassReminderScheduler.cancelAll(this)
         renderSchedule()
+    }
+
+    private fun persistSchedule() {
+        store.saveSchedule(currentCourses, currentPeriodTimes)
+        ClassReminderScheduler.schedule(
+            this,
+            currentCourses,
+            currentPeriodTimes,
+            reminderMinutes
+        )
+    }
+
+    private fun showReminderDialog() {
+        val input = EditText(this)
+        input.inputType = InputType.TYPE_CLASS_NUMBER
+        input.hint = getString(R.string.reminder_input_hint)
+        input.setText(reminderMinutes.toString())
+        val padding = (20 * resources.displayMetrics.density).toInt()
+        input.setPadding(padding, padding, padding, padding)
+
+        val dialog = AlertDialog.Builder(this)
+            .setTitle(R.string.reminder_dialog_title)
+            .setMessage(R.string.reminder_dialog_message)
+            .setView(input)
+            .setPositiveButton(R.string.save, null)
+            .setNegativeButton(R.string.cancel, null)
+            .create()
+
+        dialog.setOnShowListener {
+            dialog.getButton(AlertDialog.BUTTON_POSITIVE).setOnClickListener {
+                val minutes = input.text.toString().trim().toIntOrNull()
+                if (minutes == null || minutes < 0) {
+                    input.error = getString(R.string.reminder_invalid)
+                    return@setOnClickListener
+                }
+                reminderMinutes = minutes
+                store.saveReminderMinutes(minutes)
+                ClassReminderScheduler.schedule(
+                    this,
+                    currentCourses,
+                    currentPeriodTimes,
+                    minutes
+                )
+                if (minutes > 0) {
+                    requestNotificationPermissionIfNeeded()
+                    Toast.makeText(
+                        this,
+                        getString(R.string.reminder_saved, minutes),
+                        Toast.LENGTH_SHORT
+                    ).show()
+                } else {
+                    Toast.makeText(this, R.string.reminder_off, Toast.LENGTH_SHORT).show()
+                }
+                dialog.dismiss()
+            }
+        }
+        dialog.show()
+    }
+
+    private fun requestNotificationPermissionIfNeeded() {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU &&
+            ContextCompat.checkSelfPermission(
+                this,
+                Manifest.permission.POST_NOTIFICATIONS
+            ) != PackageManager.PERMISSION_GRANTED
+        ) {
+            notificationPermissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
+        }
     }
 
     private fun renderSchedule(warnings: List<String> = emptyList()) {
