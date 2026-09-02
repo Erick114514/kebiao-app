@@ -44,16 +44,22 @@ class MainActivity : AppCompatActivity() {
     private val currentCourses = mutableListOf<Course>()
     private var currentPeriodTimes = DEFAULT_PERIOD_TIMES
     private var reminderMinutes = ScheduleStore.DEFAULT_REMINDER_MINUTES
+    private var pendingTestNotification = false
 
     private val notificationPermissionLauncher = registerForActivityResult(
         ActivityResultContracts.RequestPermission()
     ) { granted ->
-        if (!granted && reminderMinutes > 0) {
-            Toast.makeText(
-                this,
-                R.string.notification_permission_denied,
-                Toast.LENGTH_LONG
-            ).show()
+        if (granted && pendingTestNotification) {
+            pendingTestNotification = false
+            ClassReminderScheduler.sendTestNotification(this, reminderMinutes)
+        } else if (!granted) {
+            if (reminderMinutes > 0) {
+                Toast.makeText(
+                    this,
+                    R.string.notification_permission_denied,
+                    Toast.LENGTH_LONG
+                ).show()
+            }
         }
     }
 
@@ -85,7 +91,7 @@ class MainActivity : AppCompatActivity() {
         findViewById<Button>(R.id.btnImport).setOnClickListener { launchDocumentPicker() }
         findViewById<Button>(R.id.btnEmptyManual).setOnClickListener { showManualInputDialog() }
         findViewById<Button>(R.id.btnEmptyImport).setOnClickListener { launchDocumentPicker() }
-        findViewById<Button>(R.id.btnRemind).setOnClickListener { showReminderDialog() }
+        findViewById<Button>(R.id.btnRemindSummary).setOnClickListener { showReminderDialog() }
         clearButton.setOnClickListener { clearSchedule() }
 
         val saved = store.loadSchedule()
@@ -131,6 +137,7 @@ class MainActivity : AppCompatActivity() {
                 }
                 renderSchedule(it.warnings)
                 persistSchedule()
+                requestNotificationPermissionIfNeeded()
             }
             result.onFailure {
                 setBusy(false, "")
@@ -180,6 +187,7 @@ class MainActivity : AppCompatActivity() {
                 renderSchedule()
                 persistSchedule()
                 dialog.dismiss()
+                requestNotificationPermissionIfNeeded()
             }
         }
         dialog.show()
@@ -232,6 +240,7 @@ class MainActivity : AppCompatActivity() {
                 renderSchedule()
                 persistSchedule()
                 dialog.dismiss()
+                requestNotificationPermissionIfNeeded()
             }
         }
         dialog.show()
@@ -303,6 +312,7 @@ class MainActivity : AppCompatActivity() {
             .setView(input)
             .setPositiveButton(R.string.save, null)
             .setNegativeButton(R.string.cancel, null)
+            .setNeutralButton(R.string.reminder_test, null)
             .create()
 
         dialog.setOnShowListener {
@@ -332,11 +342,29 @@ class MainActivity : AppCompatActivity() {
                 }
                 dialog.dismiss()
             }
+            dialog.getButton(AlertDialog.BUTTON_NEUTRAL).setOnClickListener {
+                sendTestNotificationIfPossible()
+            }
         }
         dialog.show()
     }
 
+    private fun sendTestNotificationIfPossible() {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU &&
+            ContextCompat.checkSelfPermission(
+                this,
+                Manifest.permission.POST_NOTIFICATIONS
+            ) != PackageManager.PERMISSION_GRANTED
+        ) {
+            pendingTestNotification = true
+            notificationPermissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
+        } else {
+            ClassReminderScheduler.sendTestNotification(this, reminderMinutes)
+        }
+    }
+
     private fun requestNotificationPermissionIfNeeded() {
+        if (reminderMinutes <= 0) return
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU &&
             ContextCompat.checkSelfPermission(
                 this,

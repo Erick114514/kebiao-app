@@ -31,6 +31,9 @@
     <string name="reminder_saved">已设置提前 %1$d 分钟提醒</string>
     <string name="reminder_off">已关闭上课提醒</string>
     <string name="notification_permission_denied">需要通知权限才能发送上课提醒</string>
+    <string name="reminder_test">发送测试通知</string>
+    <string name="reminder_test_text">测试通知：已设置提前 %1$d 分钟提醒</string>
+    <string name="reminder_test_off_text">测试通知：提醒已关闭</string>
     <string name="notification_channel_name">上课提醒</string>
     <string name="notification_channel_description">每节课开始前提醒上课</string>
     <string name="notification_title">上课提醒</string>

@@ -26,6 +26,7 @@ object ClassReminderScheduler {
     private const val EXTRA_TITLE = "extra_title"
     private const val EXTRA_TEXT = "extra_text"
     private const val EXTRA_REQUEST_CODE = "extra_request_code"
+    private const val TEST_REQUEST_CODE = 9999
 
     fun createChannel(context: Context) {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
@@ -148,6 +149,19 @@ object ClassReminderScheduler {
             .setContentIntent(contentIntent)
             .build()
         NotificationManagerCompat.from(context).notify(requestCode, notification)
+    }
+
+    fun sendTestNotification(context: Context, leadMinutes: Int) {
+        val text = if (leadMinutes > 0) {
+            context.getString(R.string.reminder_test_text, leadMinutes)
+        } else {
+            context.getString(R.string.reminder_test_off_text)
+        }
+        val intent = Intent(context, ClassReminderReceiver::class.java)
+            .putExtra(EXTRA_TITLE, context.getString(R.string.notification_title))
+            .putExtra(EXTRA_TEXT, text)
+            .putExtra(EXTRA_REQUEST_CODE, TEST_REQUEST_CODE)
+        showNotification(context, intent)
     }
 
     private fun buildText(context: Context, courses: List<Course>, period: Int): String {
