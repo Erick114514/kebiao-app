@@ -1,6 +1,15 @@
+import java.io.FileInputStream
+import java.util.Properties
+
 plugins {
     id("com.android.application")
     id("org.jetbrains.kotlin.android")
+}
+
+val keystoreProperties = Properties()
+val keystorePropertiesFile = rootProject.file("keystore.properties")
+if (keystorePropertiesFile.exists()) {
+    FileInputStream(keystorePropertiesFile).use { keystoreProperties.load(it) }
 }
 
 android {
@@ -21,9 +30,13 @@ android {
     signingConfigs {
         create("release") {
             storeFile = file("../kebiao-release.jks")
-            storePassword = "kebiao123456"
-            keyAlias = "kebiao"
-            keyPassword = "kebiao123456"
+            storePassword = keystoreProperties.getProperty("storePassword")
+                ?: System.getenv("KEBIAO_STORE_PASSWORD")
+                ?: ""
+            keyAlias = keystoreProperties.getProperty("keyAlias") ?: "kebiao"
+            keyPassword = keystoreProperties.getProperty("keyPassword")
+                ?: System.getenv("KEBIAO_KEY_PASSWORD")
+                ?: ""
         }
     }
 
