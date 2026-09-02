@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">课表</string>
+    <string name="import_pdf">导入 PDF</string>
+    <string name="sample">示例课表</string>
+    <string name="empty_title">导入选课结果 PDF</string>
+    <string name="empty_subtitle">自动识别课程名称、老师、教室和上课周次，生成周一至周日的周课表。</string>
+</resources>

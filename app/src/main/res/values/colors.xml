@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <color name="pageBackground">#F7F8FA</color>
+    <color name="topBar">#E9EEF5</color>
+    <color name="topBarText">#22303F</color>
+    <color name="textPrimary">#20262E</color>
+    <color name="textSecondary">#5A6673</color>
+    <color name="primary">#2563EB</color>
+    <color name="primaryDark">#1D4ED8</color>
+</resources>
