@@ -12,5 +12,8 @@ class ClassReminderReceiver : BroadcastReceiver() {
             return
         }
         ClassReminderScheduler.showNotification(context, intent)
+        if (intent.action == ClassReminderScheduler.ACTION_REMIND) {
+            ClassReminderScheduler.rescheduleFromStorage(context)
+        }
     }
 }

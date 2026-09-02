@@ -22,7 +22,7 @@ import java.util.Calendar
 object ClassReminderScheduler {
 
     private const val CHANNEL_ID = "class_reminders"
-    private const val ACTION_REMIND = "com.example.kebiao.action.CLASS_REMIND"
+    const val ACTION_REMIND = "com.example.kebiao.action.CLASS_REMIND"
     private const val EXTRA_TITLE = "extra_title"
     private const val EXTRA_TEXT = "extra_text"
     private const val EXTRA_REQUEST_CODE = "extra_request_code"
@@ -85,12 +85,21 @@ object ClassReminderScheduler {
                 intent,
                 PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
             )
-            alarmManager.setRepeating(
-                AlarmManager.RTC_WAKEUP,
-                triggerAt,
-                AlarmManager.INTERVAL_DAY * 7,
-                pendingIntent
-            )
+            val canScheduleExact = Build.VERSION.SDK_INT < Build.VERSION_CODES.S ||
+                alarmManager.canScheduleExactAlarms()
+            if (canScheduleExact) {
+                alarmManager.setExactAndAllowWhileIdle(
+                    AlarmManager.RTC_WAKEUP,
+                    triggerAt,
+                    pendingIntent
+                )
+            } else {
+                alarmManager.setAndAllowWhileIdle(
+                    AlarmManager.RTC_WAKEUP,
+                    triggerAt,
+                    pendingIntent
+                )
+            }
         }
     }
 
