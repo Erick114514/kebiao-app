@@ -1,6 +1,7 @@
 package com.example.kebiao.parser
 
 import com.example.kebiao.model.Course
+import com.example.kebiao.model.DEFAULT_PERIOD_TIMES
 import com.example.kebiao.model.ScheduleParseResult
 import kotlin.math.abs
 import kotlin.math.max
@@ -134,7 +135,7 @@ class PdfCourseParser {
         columns: List<DayColumn>,
         pageHeight: Float
     ): Map<Int, Float> {
-        val firstDayLeft = columns.firstOrNull()?.left ?: (pageWidthFallback(lines))
+        val firstDayLeft = columns.minOfOrNull { it.left } ?: pageWidthFallback(lines)
         val rows = mutableMapOf<Int, Float>()
         for (line in lines) {
             val match = PERIOD_LABEL_REGEX.find(line.text)
@@ -170,12 +171,13 @@ class PdfCourseParser {
                 val rawTime = timeMatch?.groupValues?.get(1)
                     ?.replace("：", ":")
                     ?.replace("·", "-")
+                    ?.replace(" ", "")
                     ?.trim()
                     ?: ""
                 times[index] = if (rawTime.matches(TIME_PATTERN)) {
                     rawTime
                 } else {
-                    DEFAULT_PERIOD_TIMES.getOrNull(index - 1) ?: rawTime
+                    DEFAULT_PERIOD_TIMES.getOrNull(index - 1)?.substringAfter('\n') ?: rawTime
                 }
             }
         }
@@ -229,7 +231,17 @@ class PdfCourseParser {
             when {
                 isWeeks(normalized) -> existing?.weeks = fragment.text
                 isPeriods(normalized) -> existing?.periods = fragment.text
-                isLocation(normalized) -> existing?.location = fragment.text
+                isLocation(normalized) -> {
+                    val builder = existing
+                    if (builder != null) {
+                        val currentLocation = builder.location
+                        builder.location = if (currentLocation.isNullOrBlank()) {
+                            fragment.text.trim()
+                        } else {
+                            currentLocation.trimEnd() + fragment.text.trim()
+                        }
+                    }
+                }
                 isTeacherLike -> {
                     val builder = existing ?: EntryBuilder(fragment.left, fragment.centerY).also { builders.add(it) }
                     builder.teacherMode = true
@@ -403,8 +415,17 @@ class PdfCourseParser {
     }
 
     private fun normalizeCourseName(name: String): String {
-        val trimmed = name.trim()
-        if (trimmed.contains("（一）")) return trimmed
+        val trimmed = name.trim().replace(Regex("\\s+"), " ")
+        if (trimmed.contains("（一）") || trimmed.contains("(一)")) {
+            return trimmed
+                .replace(Regex("(?:[-_＿]?|一?)\\d{2}$"), "")
+                .replace(Regex("\\s+"), "")
+                .trim()
+        }
+        val spaceMatch = COURSE_SECTION_SPACE_REGEX.find(trimmed)
+        if (spaceMatch != null) {
+            return "${spaceMatch.groupValues[1]}（一）${spaceMatch.groupValues[2]}"
+        }
         val match = COURSE_SECTION_REGEX.find(trimmed)
         return if (match != null) {
             "${match.groupValues[1]}（一）${match.groupValues[3]}"
@@ -417,28 +438,14 @@ class PdfCourseParser {
         private val DAY_HEADER_REGEX = Regex("^(?:星期|周)\\s*([一二三四五六日])\\s*$")
         private val PERIOD_LABEL_REGEX = Regex("第\\s*(\\d{1,2})\\s*节")
         private val PERIOD_RANGE_REGEX =
-            Regex("^\\s*(\\d{1,2})\\s*[-—－–~一]\\s*(\\d{1,2})\\s*节\\s*$")
+            Regex("^\\s*(?:第\\s*)?(\\d{1,2})\\s*[-—－–~一至]\\s*(\\d{1,2})\\s*节?\\s*$")
         private val SINGLE_PERIOD_REGEX = Regex("^\\s*第\\s*(\\d{1,2})\\s*节\\s*$")
         private val WEEKS_REGEX = Regex(
             "^\\s*(?:(?:第\\s*)?\\d{1,2}\\s*[-—－–~一]\\s*\\d{1,2}\\s*周|第\\s*\\d{1,2}\\s*周|单周|双周)\\s*$"
         )
         private val LOCATION_KEYWORDS = listOf("校区", "楼", "教室", "实验室", "中心", "场", "室")
         private val COURSE_SECTION_REGEX = Regex("^(.+?)(一)(\\d{2})$")
+        private val COURSE_SECTION_SPACE_REGEX = Regex("^(.+?)\\s+(\\d{2})$")
         private val TIME_PATTERN = Regex("^\\d{1,2}:\\d{2}-\\d{1,2}:\\d{2}$")
-        private val DEFAULT_PERIOD_TIMES = listOf(
-            "08:00-08:45",
-            "08:50-09:35",
-            "09:50-10:35",
-            "10:40-11:25",
-            "11:30-12:15",
-            "14:00-14:45",
-            "14:50-15:35",
-            "15:50-16:35",
-            "16:40-17:25",
-            "17:30-18:15",
-            "19:00-19:45",
-            "19:50-20:35",
-            "20:45-21:30"
-        )
     }
 }

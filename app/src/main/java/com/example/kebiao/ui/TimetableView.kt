@@ -83,7 +83,10 @@ class TimetableView @JvmOverloads constructor(
     }
 
     override fun onTouchEvent(event: MotionEvent): Boolean {
-        if (event.action == MotionEvent.ACTION_UP) {
+        if (event.actionMasked == MotionEvent.ACTION_DOWN) {
+            return true
+        }
+        if (event.actionMasked == MotionEvent.ACTION_UP) {
             val course = placed.firstOrNull {
                 event.x >= it.left && event.x <= it.right && event.y >= it.top && event.y <= it.bottom
             }?.course
@@ -127,10 +130,12 @@ class TimetableView @JvmOverloads constructor(
             val cardWidth = (dayWidth - pad * 2f) / columnCount
             for (i in dayCourses.indices) {
                 val course = dayCourses[i]
+                val startPeriod = course.startPeriod.coerceIn(1, periodCount)
+                val endPeriod = course.endPeriod.coerceIn(startPeriod, periodCount)
                 val left = labelWidth + day * dayWidth + pad + colors[i] * cardWidth
                 val right = left + cardWidth - gap
-                val top = headerHeight + (course.startPeriod - 1) * rowHeight + pad
-                val bottom = headerHeight + course.endPeriod * rowHeight - pad
+                val top = headerHeight + (startPeriod - 1) * rowHeight + pad
+                val bottom = headerHeight + endPeriod * rowHeight - pad
                 result += PlacedCourse(course, left, top, right, bottom)
             }
         }

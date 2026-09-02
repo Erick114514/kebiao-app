@@ -28,13 +28,13 @@
             android:textStyle="bold" />
 
         <com.google.android.material.button.MaterialButton
-            android:id="@+id/btnSample"
+            android:id="@+id/btnManual"
             style="@style/Widget.Material3.Button.OutlinedButton"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:minWidth="0dp"
-            android:text="@string/sample"
-            app:icon="@drawable/ic_sample"
+            android:text="@string/manual_input"
+            app:icon="@drawable/ic_manual"
             app:iconGravity="textStart"
             app:iconPadding="6dp"
             app:iconTint="@color/topBarText" />
@@ -46,7 +46,7 @@
             android:layout_height="wrap_content"
             android:layout_marginStart="8dp"
             android:minWidth="0dp"
-            android:text="@string/import_pdf"
+            android:text="@string/import_file"
             app:icon="@drawable/ic_import"
             app:iconGravity="textStart"
             app:iconPadding="6dp" />
@@ -102,14 +102,33 @@
             android:textColor="@color/textSecondary"
             android:textSize="14sp" />
 
-        <com.google.android.material.button.MaterialButton
-            android:id="@+id/btnEmptyImport"
+        <LinearLayout
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:layout_marginTop="24dp"
-            android:text="@string/import_pdf"
-            app:icon="@drawable/ic_import"
-            app:iconGravity="textStart" />
+            android:gravity="center"
+            android:orientation="horizontal">
+
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/btnEmptyManual"
+                style="@style/Widget.Material3.Button.OutlinedButton"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:minWidth="0dp"
+                android:text="@string/manual_input"
+                app:icon="@drawable/ic_manual"
+                app:iconGravity="textStart" />
+
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/btnEmptyImport"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="12dp"
+                android:text="@string/import_file"
+                app:icon="@drawable/ic_import"
+                app:iconGravity="textStart" />
+
+        </LinearLayout>
 
     </LinearLayout>
 
@@ -136,14 +155,36 @@
 
     </ScrollView>
 
-    <TextView
-        android:id="@+id/summaryText"
+    <LinearLayout
+        android:id="@+id/summaryBar"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:background="@color/topBar"
-        android:padding="12dp"
-        android:textColor="@color/textSecondary"
-        android:textSize="12sp"
-        android:visibility="gone" />
+        android:gravity="center_vertical"
+        android:orientation="horizontal"
+        android:paddingStart="12dp"
+        android:paddingTop="4dp"
+        android:paddingEnd="8dp"
+        android:paddingBottom="4dp"
+        android:visibility="gone">
+
+        <TextView
+            android:id="@+id/summaryText"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:textColor="@color/textSecondary"
+            android:textSize="12sp" />
+
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/btnClear"
+            style="@style/Widget.Material3.Button.TextButton"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:minWidth="0dp"
+            android:text="@string/clear"
+            android:visibility="gone" />
+
+    </LinearLayout>
 
 </LinearLayout>

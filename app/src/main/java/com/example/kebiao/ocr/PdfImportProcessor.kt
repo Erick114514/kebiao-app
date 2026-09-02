@@ -7,15 +7,19 @@ import android.graphics.Matrix
 import android.graphics.pdf.PdfRenderer
 import android.net.Uri
 import android.os.ParcelFileDescriptor
+import com.example.kebiao.model.DEFAULT_PERIOD_TIMES
 import com.example.kebiao.model.ScheduleParseResult
 import com.example.kebiao.parser.OcrElement
 import com.example.kebiao.parser.OcrLine
 import com.example.kebiao.parser.PdfCourseParser
+import com.example.kebiao.parser.PdfTextLayoutExtractor
 import com.google.android.gms.tasks.Tasks
 import com.google.mlkit.vision.common.InputImage
 import com.google.mlkit.vision.text.Text
 import com.google.mlkit.vision.text.TextRecognition
 import com.google.mlkit.vision.text.chinese.ChineseTextRecognizerOptions
+import com.tom_roush.pdfbox.android.PDFBoxResourceLoader
+import com.tom_roush.pdfbox.pdmodel.PDDocument
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import java.io.File
@@ -23,6 +27,10 @@ import kotlin.math.max
 import kotlin.math.min
 
 class PdfImportProcessor(private val context: Context) {
+
+    init {
+        PDFBoxResourceLoader.init(context.applicationContext)
+    }
 
     suspend fun processUri(uri: Uri): ScheduleParseResult = withContext(Dispatchers.IO) {
         val file = File(context.cacheDir, "kebiao_${System.currentTimeMillis()}.pdf")
@@ -36,19 +44,57 @@ class PdfImportProcessor(private val context: Context) {
         }
     }
 
-    suspend fun processAsset(assetPath: String): ScheduleParseResult = withContext(Dispatchers.IO) {
-        val file = File(context.cacheDir, "sample_${System.currentTimeMillis()}.pdf")
-        try {
-            context.assets.open(assetPath).use { input ->
-                file.outputStream().use { output -> input.copyTo(output) }
+    private fun processPdfFile(file: File): ScheduleParseResult {
+        tryExtractText(file)?.let { return it }
+        return processPdfWithOcr(file)
+    }
+
+    private fun tryExtractText(file: File): ScheduleParseResult? {
+        return try {
+            val document = PDDocument.load(file)
+            try {
+                val layouts = PdfTextLayoutExtractor().extract(document)
+                if (layouts.isEmpty()) return null
+                val hasTimetableEvidence = layouts.any { layout ->
+                    layout.lines.any { DAY_HEADER_REGEX.matches(it.text.trim()) } &&
+                        layout.lines.any { PERIOD_LABEL_REGEX.containsMatchIn(it.text) }
+                }
+                if (!hasTimetableEvidence) return null
+                val results = layouts.map { layout ->
+                    PdfCourseParser().parse(layout.lines, layout.width, layout.height)
+                }
+                val courses = results
+                    .flatMap { it.courses }
+                    .distinctBy {
+                        listOf(
+                            it.dayIndex,
+                            it.startPeriod,
+                            it.endPeriod,
+                            it.name,
+                            it.teacher,
+                            it.weeks,
+                            it.location
+                        )
+                    }
+                if (courses.size < 3) return null
+                val periodTimes = results
+                    .firstOrNull { it.periodTimes.isNotEmpty() }
+                    ?.periodTimes
+                    ?: DEFAULT_PERIOD_TIMES
+                ScheduleParseResult(
+                    courses = courses,
+                    periodTimes = periodTimes,
+                    warnings = results.flatMap { it.warnings }
+                )
+            } finally {
+                document.close()
             }
-            processPdfFile(file)
-        } finally {
-            file.delete()
+        } catch (e: Exception) {
+            null
         }
     }
 
-    private fun processPdfFile(file: File): ScheduleParseResult {
+    private fun processPdfWithOcr(file: File): ScheduleParseResult {
         val descriptor = ParcelFileDescriptor.open(file, ParcelFileDescriptor.MODE_READ_ONLY)
         val renderer = PdfRenderer(descriptor)
         val recognizer = TextRecognition.getClient(
@@ -112,5 +158,10 @@ class PdfImportProcessor(private val context: Context) {
             }
         }
         return lines
+    }
+
+    companion object {
+        private val DAY_HEADER_REGEX = Regex("^(?:星期|周)\\s*[一二三四五六日]$")
+        private val PERIOD_LABEL_REGEX = Regex("第\\s*\\d{1,2}\\s*节")
     }
 }

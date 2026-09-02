@@ -1,8 +1,24 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="app_name">课表</string>
-    <string name="import_pdf">导入 PDF</string>
-    <string name="sample">示例课表</string>
-    <string name="empty_title">导入选课结果 PDF</string>
-    <string name="empty_subtitle">自动识别课程名称、老师、教室和上课周次，生成周一至周日的周课表。</string>
+    <string name="import_file">导入文件</string>
+    <string name="manual_input">手动输入</string>
+    <string name="clear">清空</string>
+    <string name="empty_title">导入课表文件</string>
+    <string name="empty_subtitle">支持 PDF、DOC、DOCX，也可手动输入课程生成周一至周日的周课表。</string>
+    <string name="manual_name">课程名称 *</string>
+    <string name="manual_teacher">老师</string>
+    <string name="manual_location">教室</string>
+    <string name="manual_weeks">周次</string>
+    <string name="manual_weeks_hint">例如 1-16周</string>
+    <string name="manual_day">星期</string>
+    <string name="manual_start_period">开始节次</string>
+    <string name="manual_end_period">结束节次</string>
+    <string name="add">添加</string>
+    <string name="edit_course">编辑课程</string>
+    <string name="save">保存</string>
+    <string name="cancel">取消</string>
+    <string name="ok">知道了</string>
+    <string name="name_required">请输入课程名称</string>
+    <string name="schedule_summary">当前共 %1$d 门课程。</string>
 </resources>

@@ -9,7 +9,65 @@ import java.nio.charset.StandardCharsets
 class PdfCourseParserTest {
 
     @Test
-    fun `parses sample timetable into expected courses`() {
+    fun `merges split location fragments`() {
+        fun line(text: String, x: Float, y: Float): OcrLine {
+            val width = text.length * 12f
+            return OcrLine(
+                text,
+                listOf(OcrElement(text, x, y, x + width, y + 30f))
+            )
+        }
+
+        val lines = listOf(
+            line("星期一", 300f, 10f),
+            line("第1节", 80f, 100f),
+            line("模拟电路实验", 300f, 100f),
+            line("张宇识*胡丙萌", 300f, 140f),
+            line("5-10周", 300f, 180f),
+            line("11-13节", 300f, 220f),
+            line("丰台校区崇理", 300f, 260f),
+            line("楼崇理414", 420f, 260f)
+        )
+
+        val result = PdfCourseParser().parse(lines, 2000f, 2000f)
+
+        assertEquals(1, result.courses.size)
+        assertEquals("丰台校区崇理楼崇理414", result.courses[0].location)
+        assertEquals(11, result.courses[0].startPeriod)
+        assertEquals(13, result.courses[0].endPeriod)
+    }
+
+    @Test
+    fun `parses explicit period range with leading 第 prefix`() {
+        val lines = listOf(
+            OcrLine(
+                "星期一",
+                listOf(OcrElement("星期一", 300f, 10f, 390f, 40f))
+            ),
+            OcrLine(
+                "第1节",
+                listOf(OcrElement("第1节", 80f, 100f, 200f, 130f))
+            ),
+            OcrLine(
+                "数字电路",
+                listOf(OcrElement("数字电路", 300f, 100f, 520f, 130f))
+            ),
+            OcrLine(
+                "第3-5节",
+                listOf(OcrElement("第3-5节", 300f, 140f, 440f, 170f))
+            )
+        )
+
+        val result = PdfCourseParser().parse(lines, 2000f, 2000f)
+
+        assertEquals(1, result.courses.size)
+        assertEquals(0, result.courses[0].dayIndex)
+        assertEquals(3, result.courses[0].startPeriod)
+        assertEquals(5, result.courses[0].endPeriod)
+    }
+
+    @Test
+    fun `parses ocr timetable into expected courses`() {
         val lines = readLines()
         val result = PdfCourseParser().parse(lines, 2932f, 2718f)
 
